@@ -17,10 +17,11 @@ class Transfer {
 	public $series_count;
 	public $api_key;
 	public $release_id;
-	// public $expected_series_count;
 	public $request;
 	public $ch;
 	public $download;
+	public $expected;
+	public $matches;
 
 	//Declare constants for Proxy and Useragent
 	const PROXY = "http://h1proxy.frb.org:8080/";
@@ -30,8 +31,8 @@ class Transfer {
 	 * 	Constructor function to initialize class and declare variables.
 	 *
 	 */
-
 	public function __construct() {
+
 		$this->user_name = strtolower(exec("ECHO %USERNAME%", $output_temp, $return_temp));;
 		$this->dir = "C:/Users/$this->user_name/Documents/test_directory/"; //$dir
 		$this->files = array_diff(scandir($this->dir), array('..', '.'));
@@ -43,6 +44,8 @@ class Transfer {
 		$this->request = "http://api.stlouisfed.org/fred/release/series?release_id=$this->release_id&api_key=$this->api_key&file_type=json";
 		$this->ch = curl_init();
 		$this->download = curl_exec($this->ch);
+		$this->expected = NULL;
+		$this->matches = NULL;
 	}
 
 	/**
@@ -50,6 +53,7 @@ class Transfer {
 	 *
 	 */
 	public function get_username() {
+
 		echo "Username: ".$this->user_name."\n";
 	}
 
@@ -58,6 +62,7 @@ class Transfer {
 	 *
 	 */
 	public function get_dir() {
+
 		echo "File Location: ".$this->dir."\n";
 	}
 
@@ -66,9 +71,15 @@ class Transfer {
 	}
 */
 	public function count_files() {
+
 		echo "There are ".$this->file_count." files."."\n";
 	}
 	
+	/**
+	 * This function validates the count of series to upload. 
+	 * The program errors out if there is only one file or if there are an odd number of files.
+	 *
+	 */
 	public function count_series() {
 
 		if ($this->file_count == 1) 
@@ -80,17 +91,18 @@ class Transfer {
 		else if ($this->file_count % 2 !== 0) 
 		{
 			echo "Error: There are an odd number of files in the directory. Exiting program.\n";
+			//Delete files from directory
 			//Logging goes here.
 			exit;
 		} 
 		else 
 		{
 			echo "There are ".$this->series_count." series."."\n";
-			return $this->series_count;
+			$this->compare_series();
 		}
 	}
 	
-	public function compare_series() {
+	public function download_json() {
 
 		curl_setopt($this->ch, CURLOPT_URL, $this->request);
 		curl_setopt($this->ch, CURLOPT_USERAGENT, Transfer::USERAGENT);
@@ -101,9 +113,12 @@ class Transfer {
 		{
 			$this->download = curl_exec($this->ch);
 		}
-		
+	}	
 
-		if (!preg_match("/\"count\":(\d*)/", $this->download, $matches)) 
+	public function compare_series() {
+
+		$this->download_json();
+		if (!preg_match("/\"count\":(\d*)/", $this->download, $this->matches)) 
 		{
 			echo "Did not find the series count that is listed in the downloaded file.\n";
 			//Logging goes here.
@@ -111,15 +126,16 @@ class Transfer {
 		} 
 		else 
 		{
-			$expected = $matches[1];
-			if ($expected == $this->series_count) 
+			$this->expected = $this->matches[1];
+			if ($this->expected == $this->series_count) 
 			{
-				echo "The expected number of series "."(".$expected.")"." matches the number of processed series. "."(".$this->series_count.")".".\nProceeding to upload the files to FRED";
+				echo "The expected number of series "."(".$this->expected.")"." matches the number of processed series. "."(".$this->series_count.")".".\nProceeding to upload the files to FRED";
 				$this->loading_animation();
 			} 
 			else 
 			{
 				echo "There is a discrepancy between the number of expected series and the number of series in the directory. Please see the log for details.\n";
+				$this->series_different();
 				//Logging goes here.
 				exit;
 			}
@@ -128,41 +144,72 @@ class Transfer {
 
 	public function series_different() {
 
+		echo $this->expected." does not equal ".$this->series_count."."."\n";
 	}
 
 	public function transfer_series() {
+
 
 	}
 
 	public function compare_transferred() {
 
+
 	}
 
 	public function file_volume_check () {
 
+
 	}
 
 	public function success_message() {
+
 		echo "File upload successful.\n";
 	}
 
 	public function error_message() {
+
 		echo "Oops. There was an error. Please see the log for details.\n";
 	}
 
-	public function loading_animation() 
-	{
-		for ($seconds = 0; $seconds < 6; $seconds++) 
+	public function die() {
+
+		
+	}
+
+	public function loading_animation() {
+
+		for ($seconds = 0; $seconds < 5; $seconds++) 
 		{
 			print ".";
 			sleep(1);
 		}
 		echo "\n";
 	}
+
+	public function json_test() {
+		$this->download_json();
+		$json = json_decode($this->download);
+		if (isset($json)) 
+		{
+			echo "true\n";
+			foreach ($json as $obj) 
+			{
+				echo $obj."\n";
+			}
+		} 
+		else
+		{
+			echo "error";
+			exit;
+		}
+
+	}
 /*	public function __destruct() {
 		
 	}
 */
+
 }
 
 $test = new Transfer();
@@ -170,5 +217,5 @@ $test->get_username();
 $test->get_dir();
 $test->count_files();
 $test->count_series();
-$test->compare_series();
+/*$test->json_test();*/
 ?>
