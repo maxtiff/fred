@@ -43,7 +43,7 @@ class Transfer {
 		//$this->expected_series_count = $expected_series_count;
 		$this->request = "http://api.stlouisfed.org/fred/release/series?release_id=$this->release_id&api_key=$this->api_key&file_type=json";
 		$this->ch = curl_init();
-		$this->download = curl_exec($this->ch);
+		$this->download_obj = curl_exec($this->ch);
 		$this->expected = NULL;
 		$this->matches = NULL;
 	}
@@ -109,16 +109,16 @@ class Transfer {
 		curl_setopt($this->ch, CURLOPT_RETURNTRANSFER,1);
 		curl_setopt($this->ch, CURLOPT_PROXY, Transfer::PROXY);
 		
-		while (!isset($this->download) || $this->download === false || preg_match("/\<\!DOCTYPE HTML PUBLI/", $this->download)) 
+		while (!isset($this->download_obj) || $this->download_obj === false || preg_match("/\<\!DOCTYPE HTML PUBLI/", $this->download_obj)) 
 		{
-			$this->download = curl_exec($this->ch);
+			$this->download_obj = curl_exec($this->ch);
 		}
 	}	
 
 	public function compare_series() {
 
 		$this->download_json();
-		if (!preg_match("/\"count\":(\d*)/", $this->download, $this->matches)) 
+		if (!preg_match("/\"count\":(\d*)/", $this->download_obj, $this->matches)) 
 		{
 			echo "Did not find the series count that is listed in the downloaded file.\n";
 			//Logging goes here.
@@ -189,7 +189,7 @@ class Transfer {
 
 	public function json_test() {
 		$this->download_json();
-		$json = json_decode($this->download);
+		$json = json_decode($this->download_obj);
 		if (isset($json)) 
 		{
 			echo "true\n";
